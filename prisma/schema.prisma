@@ -7,10 +7,168 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Role {
+  ADMIN
+  TRAINER
+  CLIENT
+}
+
 model User {
-  id       Int    @id @default(autoincrement())
-  email    String @unique
+  id       Int     @id @default(autoincrement())
+  email    String  @unique
   password String
+  fullName String? @map("full_name")
+  phone    String? @unique
+  role     Role    @default(CLIENT)
+
+  UserLevel             UserLevel[]
+  UserSubscription      UserSubscription[]
+  Trainer               Trainer[]
+  Feedback              Feedback[]
+  TrainerRecommendation TrainerRecommendation[]
+  ClassBooking          ClassBooking[]
 
   @@map("users")
+}
+
+enum Level {
+  Elementary
+  Intermediate
+  UpperIntermediate
+}
+
+model UserLevel {
+  id             Int   @id @default(autoincrement())
+  score          Int
+  suggestedLevel Level @map("suggested_level")
+  User           User? @relation(fields: [userId], references: [id])
+  userId         Int?
+
+  @@map("user_levels")
+}
+
+model Subscription {
+  id          Int     @id @default(autoincrement())
+  name        String  @unique
+  description String?
+  price       Float
+  classCount  Int     @map("class_count")
+
+  UserSubscription UserSubscription[]
+
+  @@map("subscriptions")
+}
+
+model UserSubscription {
+  id         Int     @id @default(autoincrement())
+  classCount Int     @map("class_count")
+  isAvtive   Boolean @default(true)
+
+  User           User?         @relation(fields: [userId], references: [id])
+  userId         Int?
+  Subscription   Subscription? @relation(fields: [subscriptionId], references: [id])
+  subscriptionId Int?
+
+  @@map("user_subscriptions")
+}
+
+model Specialization {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+
+  Trainer Trainer[]
+
+  @@map("specializations")
+}
+
+model Trainer {
+  id         Int     @id @default(autoincrement())
+  experience Int
+  bio        String
+  image      String?
+
+  Specialization   Specialization? @relation(fields: [specializationId], references: [id])
+  specializationId Int?
+  User             User?           @relation(fields: [userId], references: [id])
+  userId           Int?
+
+  Feedback              Feedback[]
+  TrainerRecommendation TrainerRecommendation[]
+  Class                 Class[]
+
+  @@map("trainers")
+}
+
+model Feedback {
+  id      Int    @id @default(autoincrement())
+  rating  Int
+  comment String
+
+  Trainer   Trainer? @relation(fields: [trainerId], references: [id])
+  trainerId Int?
+  User      User?    @relation(fields: [userId], references: [id])
+  userId    Int?
+
+  @@map("feedbacks")
+}
+
+model TrainerRecommendation {
+  id             Int    @id @default(autoincrement())
+  recommendation String
+
+  Trainer   Trainer? @relation(fields: [trainerId], references: [id])
+  trainerId Int?
+  User      User?    @relation(fields: [userId], references: [id])
+  userId    Int?
+
+  @@map("trainer_recommendations")
+}
+
+model Class {
+  id             Int     @id @default(autoincrement())
+  name           String  @unique
+  description    String?
+  maxParticipant Int     @map("max_participant")
+  level          Level
+  image          String
+
+  Schedule Schedule[]
+
+  Trainer   Trainer? @relation(fields: [trainerId], references: [id])
+  trainerId Int?
+
+  @@map("classes")
+}
+
+enum PaymentStatus {
+  PAID
+  PROCESS
+  UNPAID
+}
+
+model ClassBooking {
+  id            Int           @id @default(autoincrement())
+  status        String
+  paymentStatus PaymentStatus
+
+  User       User?     @relation(fields: [userId], references: [id])
+  userId     Int?
+  Schedule   Schedule? @relation(fields: [scheduleId], references: [id])
+  scheduleId Int?
+
+  @@map("class_bookings")
+}
+
+model Schedule {
+  id             Int      @id @default(autoincrement())
+  dateAndTime    DateTime
+  duration       Int
+  availableSlots Int      @map("available_slots")
+
+  ClassBooking ClassBooking[]
+
+  Class   Class? @relation(fields: [classId], references: [id])
+  classId Int?
+
+  @@map("schedules")
 }
